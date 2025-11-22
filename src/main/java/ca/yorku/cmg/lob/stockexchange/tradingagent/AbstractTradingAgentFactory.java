@@ -14,5 +14,24 @@ public abstract class AbstractTradingAgentFactory {
 	 * @param n Reference to the  {@linkplain NewsBoard} object that {@linkplain TradingAgent} will hear news from.
 	 * @return A  {@linkplain TradingAgent} object constructed according to specified parameters.
 	 */
-	public abstract TradingAgent createAgent(String type, String style, Trader t, StockExchange e, NewsBoard n); 
+public abstract TradingAgent createAgent(String type, String style, Trader t, StockExchange e, NewsBoard n);
+
+	public abstract TradingAgentFactory extends AbstractTradingAgentFactory{
+
+		public TradingAgent createAgent(String style, Trader t, StockExchange e, NewsBoard n){
+			ITradingStrategy strategy = createAgent(style, t, e);
+
+			if(type.equalIgnoreCase("Institutional"))
+				return new TradingAgentInstitutional(t, e, n, strategy);
+			else 
+				return new TradingAgentRetail(t, e, n, strategy);
+		}
+	}
+}
+
+private ITradingStrategy createStrategy(Trade t, StockExchange e){
+	if(style.equalIgnoreCase("Aggressive"))
+		return new AggressiveStrategy(t,e);
+	else 
+		return new ConservativeStrategy(t,e);
 }
