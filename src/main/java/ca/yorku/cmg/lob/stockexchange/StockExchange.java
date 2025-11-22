@@ -28,7 +28,8 @@ import ca.yorku.cmg.lob.tradestandards.IOrder;
 public class StockExchange {
 
 		private Orderbook book;
-		private NewsBoard newsDesk;
+    	private NewsBoard newsBoard;
+		private List<TradingAgent> tradingAgents;
 		
 		private SecurityList securities = new SecurityList();
 		private AccountsList accounts = new AccountsList();
@@ -38,6 +39,11 @@ public class StockExchange {
 		private ArrayList<IOrder> log = new ArrayList<>();
 		
 		private Map<String, Integer> prices = new HashMap<String, Integer>();
+
+		public StockExchange() {
+        this.newsBoard = new NewsBoard();
+        this.tradingAgents = new ArrayList<>();
+    	}
 					
 		long totalFees = 0;
 
@@ -155,48 +161,40 @@ public class StockExchange {
 	     * 
 	     * @param path the path to the accounts list file
 	     */
-		public void readAccountsListFromFile(String path) {
-		    try (BufferedReader br = new BufferedReader(new FileReader(path))) {
-	            String line;
-	            boolean isFirstLine = true; // Skip header
-
-	            while ((line = br.readLine()) != null) {
-	                if (isFirstLine) {
-	                    isFirstLine = false;
-	                    continue;
-	                }
-	                String[] parts = line.split(",", -1); // Split by comma
-	                if (parts.length >= 5) {
-	                    String traderTitle = parts[0].trim();
-	                    String traderType = parts[1].trim();
-	                    String accType = parts[2].trim();
-	                    long initBalance = Long.parseLong(parts[3].trim());
-	                    String tradingStyle = parts[4].trim();
-	                	Trader t;
-	                    if (traderType.equals("Retail")) {
-	                    	t = new TraderRetail(traderTitle);
-	                    } else {
-	                    	t = new TraderInstitutional(traderTitle);
-	                    }
-	                    if (accType.equals("Basic")) {
-	                    	accounts.addAccount(new AccountBasic(t,initBalance));
-	                    } else {
-	                    	accounts.addAccount(new AccountPro(t,initBalance));
-	                    }
-	                    if (tradingStyle.equals("Conservative")) {
-	                    	traders.add(new TradingAgentConservative(t,this,newsDesk));
-	                    } else {
-	                    	traders.add(new TradingAgentAggressive(t,this,newsDesk));
-	                    }
-	                    
-	                } else {
-	                    System.err.println("Skipping malformed line (two few attributes): " + line);
-	                }
-	            }
-	        } catch (IOException e) {
-	            e.printStackTrace();
-	        }
-		}
+		public void readAccountsListFromFile(String filename) {
+    		AbstractTradingAgentFactory factory = new TradingAgentFactory();
+    
+    try (BufferedReader br = new BufferedReader(new FileReader(filename))) {
+        String line;
+        while ((line = br.readLine()) != null) {
+            String[] parts = line.split(",");
+            String traderName = parts[0].trim();
+            String agentType = parts[1].trim();      
+            String strategyStyle = parts[2].trim();  
+            
+            Trader trader = new Trader(traderName);
+            
+            // Use factory to create the appropriate agent
+            TradingAgent agent = factory.createAgent(
+                agentType,      
+                strategyStyle,  
+                trader,
+                this,           
+                this.newsBoard  
+            );
+            
+            this.tradingAgents.add(agent);
+        }
+    } catch (IOException e) {
+        System.err.println("Error reading file: " + e.getMessage());
+    }
+	public void simulateNews() {
+        newsBoard.addEvent(new GoodNews(...));
+        newsBoard.addEvent(new BadNews(...));
+        
+        newsBoard.runEventsList();
+    }
+	}
 		
 	    /**
 	     * Reads initial positions from a file and updates account holdings.
@@ -389,5 +387,4 @@ public class StockExchange {
 			return newsDesk;
 		}
 
-		
-	}
+}
